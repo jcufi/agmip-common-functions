@@ -49,6 +49,25 @@ public class SoilHelper {
     public static String[] getRootDistributionStr(Map data, String pp) {
         return tranDoubleToString(getRootDistribution(data, pp));
     }
+    
+    /**
+     * Update the data map with calculated soil growth factor (0-1)
+     * 
+     * @param data The data holder which contains array of soil_layer_depth (cm)
+     * @param pp depth of top of curve (pivot point) (cm)
+     * @param multiplier
+     */
+    public static void updRootDistribution(Map data, String pp, String multiplier) {
+        String[] factors = getRootDistributionStr(data, pp);
+        double multi;
+        try {
+            multi = Double.parseDouble(multiplier);
+        } catch (Exception e) {
+            LOG.error("INVALID NUMBER FOR MULTIPLIER");
+            return;
+        }
+        // TODO update map
+    }
 
     /**
      * Calculate root growth factor (0-1) for each soil layer
