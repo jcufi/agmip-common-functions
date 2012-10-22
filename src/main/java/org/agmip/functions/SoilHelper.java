@@ -82,7 +82,7 @@ public class SoilHelper {
         ret[0] = 1;
 
         for (int i = 1; i < sllbs.length; i++) {
-            mid = (dbSllbs[i] - dbSllbs[i - 1]) / 2;
+            mid = (dbSllbs[i] + dbSllbs[i - 1]) / 2;
             if (mid > dbPp) {
                 ret[i] = Math.exp(-0.02 * (mid - dbPp));
             } else {
@@ -115,7 +115,7 @@ public class SoilHelper {
     private static String[] tranDoubleToString(double[] in) {
         String[] ret = new String[in.length];
         for (int i = 0; i < ret.length; i++) {
-            ret[i] = String.format("%.4f", in[i]);
+            ret[i] = String.format("%.3f", in[i]);
         }
         return ret;
     }

@@ -28,8 +28,8 @@ public class SoilHelperTest {
     @Test
     public void testGetRootDistribution() throws IOException, Exception {
         String line;
-        String pp = "8";
-        String[] expected = {"1.0000", "1.0000", "1.0000", "0.8694", "0.8694", "0.8694", "0.8694", "0.8694"};
+        String pp = "20";
+        String[] expected = {"1.000", "1.000", "0.951", "0.607", "0.333", "0.183", "0.100", "0.055"};
         String[] acctual = null;
 
         BufferedReader br = new BufferedReader(
