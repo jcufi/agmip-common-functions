@@ -5,7 +5,6 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import static org.agmip.util.MapUtil.*;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,8 +23,8 @@ public class ExperimentHelper {
      * within the planting window<br/> that has an accumulated rainfall amount
      * (P) in the previous n days.
      *
-     * @param eDate Earliest planting date (yyyy-mm-dd)
-     * @param lDate Latest planting date (yyyy-mm-dd)
+     * @param eDate Earliest planting date (mm-dd or mmdd)
+     * @param lDate Latest planting date (mm-dd or mmdd)
      * @param rain Threshold rainfall amount (mm)
      * @param days Number of days of accumulation
      * @param wthData The HashMap of experiment (including weather data)
@@ -33,81 +32,110 @@ public class ExperimentHelper {
      * @return The calculated first planting date, if not valid based on the
      * input data, will return ""
      */
-    public static String getAutoPlantingDate(String eDate, String lDate, String rain, String days, Map expData) {
+    public static void getAutoPlantingDate(String eDate, String lDate, String rain, String days, Map data) {
 
-        String defRet = "";
         Map wthData;
+        Map expData;
         ArrayList<Map> dailyData;
+        ArrayList<Map> eventData;
+        Event event;
         Calendar eDateCal = Calendar.getInstance();
         Calendar lDateCal = Calendar.getInstance();
         int intDays;
         int duration;
         double accRainAmtTotal;
-        double accRainAmt = 0;
+        double accRainAmt;
+        int expDur;
+        Window[] windows;
 
         // Validation for input parameters
         // Weather data check and try to get daily data
-        if (expData.isEmpty()) {
-            return defRet;
+        if (data.isEmpty()) {
+            return;
         } else {
             // Case for multiple data json structure
-            if (expData.containsKey("weathers")) {
-                ArrayList<Map> wths = getObjectOr(expData, "weathers", new ArrayList());
+            if (data.containsKey("weathers")) {
+                ArrayList<Map> wths = getObjectOr(data, "weathers", new ArrayList());
                 if (wths.isEmpty()) {
                     LOG.error("NO WEATHER DATA.");
-                    return defRet;
+                    return;
                 } else {
                     wthData = wths.get(0);
                     if (wthData.isEmpty()) {
                         LOG.error("NO WEATHER DATA.");
-                        return defRet;
+                        return;
                     } else {
                         dailyData = getObjectOr(wthData, "dailyWeather", new ArrayList());
                     }
                 }
             } else {
-                // Case for whole experiment data structure
-                wthData = getObjectOr(expData, "weather", new HashMap());
-                if (wthData.isEmpty()) {
-                    dailyData = getObjectOr(expData, "dailyWeather", new ArrayList());
-                } else {
-                    // Case for weather only structure
-                    dailyData = getObjectOr(wthData, "dailyWeather", new ArrayList());
-                }
+                return;
             }
 
             if (dailyData.isEmpty()) {
                 LOG.error("EMPTY DAILY WEATHER DATA.");
-                return defRet;
+                return;
             }
+        }
+
+        // Check experiment data
+        // Case for multiple data json structure
+        if (data.containsKey("experiments")) {
+            ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
+            if (exps.isEmpty()) {
+                LOG.error("NO EXPERIMENT DATA.");
+                return;
+            } else {
+                expData = exps.get(0);
+                if (expData.isEmpty()) {
+                    LOG.error("NO EXPERIMENT DATA.");
+                    return;
+                } else {
+                    Map mgnData = getObjectOr(expData, "management", new HashMap());
+                    eventData = getObjectOr(mgnData, "events", new ArrayList());
+                }
+                try {
+                    expDur = Integer.parseInt(getValueOr(expData, "exp_dur", "1"));
+                } catch (Exception e) {
+                    expDur = 1;
+                }
+                windows = new Window[expDur];
+            }
+        } else {
+            return;
+        }
+
+        if (eventData.isEmpty()) {
+            LOG.warn("EMPTY EVENT DATA.");
+            event = new Event(new ArrayList());
+        } else {
+            event = new Event(eventData);
         }
 
         // Check input dates
         if (!isValidDate(eDate, eDateCal, "-")) {
             LOG.error("INVALID EARLIST DATE:[" + eDate + "]");
-            return defRet;
+            return;
         }
         if (!isValidDate(lDate, lDateCal, "-")) {
             LOG.error("INVALID LATEST DATE:[" + lDate + "]");
-            return defRet;
+            return;
         }
         if (eDateCal.after(lDateCal)) {
-            LOG.error("LASTEST DATE [" + lDate + "] IS BEFORE EARLIST DATE:[" + eDate + "]");
-            return defRet;
-        } else {
-            duration = (int) ((lDateCal.getTimeInMillis() - eDateCal.getTimeInMillis()) / 86400000);
+            lDateCal.set(Calendar.YEAR, lDateCal.get(Calendar.YEAR) + 1);
         }
+        duration = (int) ((lDateCal.getTimeInMillis() - eDateCal.getTimeInMillis()) / 86400000);
 
         // Check Number of days of accumulation
         try {
             intDays = Integer.parseInt(days);
         } catch (Exception e) {
             LOG.error("INVALID NUMBER FOR NUMBER OF DAYS OF ACCUMULATION");
-            return defRet;
+            return;
         }
         if (intDays <= 0) {
             LOG.error("NON-POSITIVE NUMBER FOR NUMBER OF DAYS OF ACCUMULATION");
-            return defRet;
+            return;
         }
 
         // Check Threshold rainfall amount
@@ -115,65 +143,157 @@ public class ExperimentHelper {
             accRainAmtTotal = Double.parseDouble(rain);
         } catch (Exception e) {
             LOG.error("INVALID NUMBER FOR THRESHOLD RAINFALL AMOUNT");
-            return defRet;
+            return;
         }
         if (accRainAmtTotal <= 0) {
             LOG.error("NON-POSITIVE NUMBER FOR THRESHOLD RAINFALL AMOUNT");
-            return defRet;
+            return;
         }
 
-        // Find the first record which is the ealiest date
-        int first = -1;
-        int last = dailyData.size();
-        for (int i = 0; i < last; i++) {
-            String date = getValueOr(dailyData.get(i), "w_date", "");
-            if (isSameDate(date, eDate, "-")) {
-                first = i;
-                break;
+        // Find the first record which is the ealiest date for the window in each year
+        int end;
+        int start = getDailyRecIndex(dailyData, eDate, 0, 0);
+        for (int i = 0; i < windows.length; i++) {
+            end = getDailyRecIndex(dailyData, lDate, start, duration);
+            windows[i] = new Window(start, end);
+            if (i + 1 < windows.length) {
+                start = getDailyRecIndex(dailyData, eDate, end, 365 - duration);
             }
         }
-        if (first < 0) {
+
+        if (windows[0].start == dailyData.size()) {
             LOG.error("NO VALID DAILY DATA FOR SEARCH WINDOW");
-            return defRet;
+            return;
         }
-        
-        // Check first n days
-        last = Math.min(first + intDays + 1, dailyData.size());
-        for (int i = first; i < last; i++) {
 
-            try {
-                accRainAmt += Double.parseDouble(getValueOr(dailyData.get(i), "rain", "0"));
-            } catch (Exception e) {
+        // Loop each window to try to find appropriate planting date
+        for (int i = 0; i < windows.length; i++) {
+
+            // Check first n days
+            int last = Math.min(windows[i].start + intDays, windows[i].end);
+            accRainAmt = 0;
+            for (int j = windows[i].start; j < last; j++) {
+
+                try {
+                    accRainAmt += Double.parseDouble(getValueOr(dailyData.get(j), "rain", "0"));
+                } catch (Exception e) {
+                    continue;
+                }
+//                LOG.debug(getValueOr(dailyData.get(j), "w_date", "") + " : " + accRainAmt + ", " + (accRainAmt >= accRainAmtTotal));
+                if (accRainAmt >= accRainAmtTotal) {
+                    event.updatePlEvent(getValueOr(dailyData.get(j), "w_date", ""));
+                    break;
+                }
+            }
+
+            if (accRainAmt >= accRainAmtTotal) {
                 continue;
             }
-            if (accRainAmt == accRainAmtTotal) {
-                return getValueOr(dailyData.get(i), "w_date", "");
+
+            // If the window size is smaller than n
+            if (last > windows[i].end) {
+                LOG.info("NO APPROPRIATE DATE WAS FOUND FOR NO." + (i + 1) + " PLANTING EVENT");
+                // TODO remove one planting event
+                event.removePlEvent();
+            }
+
+            // Check following days
+            for (int j = last; j < windows[i].end; j++) {
+
+                try {
+                    accRainAmt -= Double.parseDouble(getValueOr(dailyData.get(j - intDays), "rain", "0"));
+                    accRainAmt += Double.parseDouble(getValueOr(dailyData.get(j), "rain", "0"));
+                } catch (Exception e) {
+                    continue;
+                }
+//                LOG.debug(getValueOr(dailyData.get(j), "w_date", "") + " : " + accRainAmt + ", " + (accRainAmt >= accRainAmtTotal));
+                if (accRainAmt >= accRainAmtTotal) {
+                    event.updatePlEvent(getValueOr(dailyData.get(j), "w_date", ""));
+                    break;
+                }
             }
         }
-        
-        // If the window size is no larger than n
-        if (first + intDays > dailyData.size()) {
-            LOG.warn("NO APPROPRIATE DATE WAS FOUND.");
-            return defRet;
+    }
+
+    /**
+     * Store a start index and end index of daily data array for a window
+     */
+    private static class Window {
+
+        public int start;
+        public int end;
+
+        public Window(int start, int end) {
+            this.start = start;
+            this.end = end;
+        }
+    }
+
+    /**
+     * To handle the planting event in the event data array
+     */
+    private static class Event {
+
+        public int next = -1;
+        public Map template;
+        public ArrayList<Map> events;
+
+        /**
+         * Constructor
+         *
+         * @param events The event data array
+         */
+        public Event(ArrayList<Map> events) {
+            this.events = events;
+            getNextPlEventIndex();
+            template = new HashMap();
+            if (next < events.size()) {
+                template.putAll(events.get(next));
+            }
         }
 
-        // Check following days
-        last = Math.min(first + duration, dailyData.size());
-        for (int i = first + intDays; i < last; i++) {
-
-            try {
-                accRainAmt -= Double.parseDouble(getValueOr(dailyData.get(i - intDays), "rain", "0"));
-                accRainAmt += Double.parseDouble(getValueOr(dailyData.get(i), "rain", "0"));
-            } catch (Exception e) {
-                continue;
-            }
-            if (accRainAmt == accRainAmtTotal) {
-                return getValueOr(dailyData.get(i), "w_date", "");
+        /**
+         * Remove the current planting event data if available
+         */
+        public void removePlEvent() {
+            if (next < events.size()) {
+                events.remove(next);
+                next--;
+                getNextPlEventIndex();
             }
         }
-        
-        LOG.warn("NO APPROPRIATE DATE WAS FOUND.");
-        return defRet;
+
+        /**
+         * Update the current planting event with given pdate, if current event
+         * not available, add a new one into array
+         *
+         * @param pdate The planting date
+         */
+        public void updatePlEvent(String pdate) {
+            if (next < events.size()) {
+                events.get(next).put("date", pdate);
+            } else {
+                Map tmp = new HashMap();
+                tmp.putAll(template);
+                tmp.put("date", pdate);
+                events.add(tmp);
+            }
+            getNextPlEventIndex();
+        }
+
+        /**
+         * Move index to the next planting event
+         */
+        private void getNextPlEventIndex() {
+            for (int i = next + 1; i < events.size(); i++) {
+                String evName = getValueOr(events.get(i), "event", "");
+                if (evName.equals("planting")) {
+                    next = i;
+                    return;
+                }
+            }
+            next = events.size();
+        }
     }
 
     /**
@@ -190,31 +310,75 @@ public class ExperimentHelper {
     private static boolean isValidDate(String date, Calendar out, String separator) {
         try {
             String[] dates = date.split(separator);
-            out.set(Calendar.YEAR, Integer.parseInt(dates[0]));
-            out.set(Calendar.MONTH, Integer.parseInt(dates[1]) - 1);
-            out.set(Calendar.DATE, Integer.parseInt(dates[2]));
+            out.set(Calendar.MONTH, Integer.parseInt(dates[0]) - 1);
+            out.set(Calendar.DATE, Integer.parseInt(dates[1]));
         } catch (Exception e) {
-            return false;
+            try {
+                out.set(Calendar.MONTH, Integer.parseInt(date.substring(0, 2)) - 1);
+                out.set(Calendar.DATE, Integer.parseInt(date.substring(2, 4)));
+            } catch (Exception e2) {
+                return false;
+            }
         }
 
         return true;
     }
 
     /**
-     * To check if two input date string is same date with no matter about 2nd input's separator
-     * 
+     * To check if two input date string is same date with no matter about 2nd
+     * input's separator
+     *
      * @param date1 1st input date string with format yyyymmdd
-     * @param date2 2nd input date string with format yyyymmdd or yyyy-mm-dd
+     * @param date2 2nd input date string with format mmdd or mm-dd
      * @param separator The separator used in 2nd string
      * @return comparison result
      */
     private static boolean isSameDate(String date1, String date2, String separator) {
-        return date1.equals(date2) || date1.equals(date2.replaceAll(separator, ""));
+
+        date2 = date2.replace(separator, "");
+        if (date2.equals("0229")) {
+            try {
+                int year1 = Integer.parseInt(date2.substring(2, 4));
+                if (year1 % 4 != 0) {
+                    return date1.endsWith("0228");
+                }
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        return date1.endsWith(date2);
+    }
+
+    private static int getDailyRecIndex(ArrayList<Map> dailyData, String findDate, int start, int expectedDiff) {
+        String date;
+        if (start + expectedDiff < dailyData.size()) {
+            date = getValueOr(dailyData.get(start + expectedDiff), "w_date", "");
+            if (isSameDate(date, findDate, "-")) {
+                return start + expectedDiff;
+            } else {
+                expectedDiff++;
+                date = getValueOr(dailyData.get(start + expectedDiff), "w_date", "");
+                if (isSameDate(date, findDate, "-")) {
+                    return start + expectedDiff;
+                }
+            }
+        }
+
+        for (int j = start; j < dailyData.size(); j++) {
+            date = getValueOr(dailyData.get(j), "w_date", "");
+            if (isSameDate(date, findDate, "-")) {
+                return j;
+            }
+        }
+        return dailyData.size();
     }
 
     /**
      * Offset a value by a constant.
-     * @param initial Initial value to offset (either a static number OR date OR variable)
+     *
+     * @param initial Initial value to offset (either a static number OR date OR
+     * variable)
      * @param offset The amount to offset the <code>initial</code>
      */
 }
