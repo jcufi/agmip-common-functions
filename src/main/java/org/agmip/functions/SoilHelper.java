@@ -17,59 +17,6 @@ public class SoilHelper {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExperimentHelper.class);
 
-//    /**
-//     * Calculate root growth factor (0-1) for each soil layer
-//     *
-//     * @param data The data holder which contains array of soil_layer_depth (cm)
-//     * @param pp depth of top of curve (pivot point) (cm)
-//     * @return The array of root_growth_factor (0-1)
-//     */
-//    public static double[] getRootDistribution(Map data, String pp) {
-//        ArrayList<Map> soils = getObjectOr(data, "soils", new ArrayList());
-//        if (soils.isEmpty()) {
-//            return null;
-//        }
-//        ArrayList<Map<String, String>> soilLarys = getObjectOr(soils.get(0), "soilLayer", new ArrayList());
-//        if (soilLarys.isEmpty()) {
-//            return null;
-//        }
-//        String[] sllbs = new String[soilLarys.size()];
-//        for (int i = 0; i < soilLarys.size(); i++) {
-//            sllbs[i] = soilLarys.get(i).get("sllb");
-//        }
-//        return getRootDistribution(sllbs, pp);
-//    }
-//
-//    /**
-//     * Calculate root growth factor (0-1) for each soil layer, return value with
-//     * String type
-//     *
-//     * @param data The data holder which contains array of soil_layer_depth (cm)
-//     * @param pp depth of top of curve (pivot point) (cm)
-//     * @return The array of root_growth_factor (0-1) (String type)
-//     */
-//    public static String[] getRootDistributionStr(Map data, String pp) {
-//        return tranDoubleToString(getRootDistribution(data, pp));
-//    }
-//
-//    /**
-//     * Update the data map with calculated soil growth factor (0-1)
-//     *
-//     * @param data The data holder which contains array of soil_layer_depth (cm)
-//     * @param pp depth of top of curve (pivot point) (cm)
-//     * @param multiplier
-//     */
-//    public static void updRootDistribution(Map data, String pp, String multiplier) {
-//        String[] factors = getRootDistributionStr(data, pp);
-//        double multi;
-//        try {
-//            multi = Double.parseDouble(multiplier);
-//        } catch (Exception e) {
-//            LOG.error("INVALID NUMBER FOR MULTIPLIER");
-//            return;
-//        }
-//        // TODO update map
-//    }
     /**
      * Calculate root growth factor (0-1) for each soil layer
      *
@@ -78,7 +25,6 @@ public class SoilHelper {
      */
     public static void getRootDistribution(String m, String pp, String rd, HashMap data) {
 
-//        double[] ret = null;    // TODO set back to map
         double[] dSllbs;
         double mid;
         double dPp;
@@ -112,17 +58,17 @@ public class SoilHelper {
             }
         }
 
-//        ret = new double[dSllbs.length];
-//        ret[0] = getGrowthFactor(dSllbs[0] / 2, dPp, dK, dM);
-        insertValue(data, "slrgf", getGrowthFactor(dSllbs[0] / 2, dPp, dK, dM, 3));
+        // First layer
+        soilLayers.get(0).put("slrgf", getGrowthFactor(dSllbs[0] / 2, dPp, dK, dM, 3));
+//        insertValue(data, "slrgf", getGrowthFactor(dSllbs[0] / 2, dPp, dK, dM, 3));
 
+        // Other layers
         for (int i = 1; i < dSllbs.length; i++) {
             mid = (dSllbs[i] + dSllbs[i - 1]) / 2;
             String slrgf = getGrowthFactor(mid, dPp, dK, dM, 3);
             soilLayers.get(i).put("slrgf", slrgf);
 //            insertValue(data, "slrgf", slrgf);
-//            ret[i] = getGrowthFactor(mid, dPp, dK, dM);
-            LOG.debug("Layer " + (i + 1) + " : sllb= " + dSllbs[i] + ", mid=" + mid + ", factor=" + slrgf);
+//            LOG.debug("Layer " + (i + 1) + " : sllb= " + dSllbs[i] + ", mid=" + mid + ", factor=" + slrgf);
         }
 
     }
@@ -188,30 +134,5 @@ public class SoilHelper {
      */
     protected static String getGrowthFactor(double mid, double pp, double k, int prec) {
         return String.format("%." + prec + "f", getGrowthFactor(mid, pp, k, 1, prec));
-    }
-
-//    /**
-//     * Calculate root growth factor (0-1) for each soil layer, return value with
-//     * String type
-//     *
-//     * @param sllbs The array of soil_layer_depth (cm)
-//     * @param pp depth of top of curve (pivot point) (cm)
-//     * @return The array of root_growth_factor (0-1) (String type)
-//     */
-//    public static String[] getRootDistributionStr(String[] sllbs, String pp) {
-//        return tranDoubleToString(getRootDistribution(sllbs, pp));
-//    }
-    /**
-     * Translate a double array to String array
-     *
-     * @param in Input double array
-     * @return String array
-     */
-    private static String[] tranDoubleToString(double[] in) {
-        String[] ret = new String[in.length];
-        for (int i = 0; i < ret.length; i++) {
-            ret[i] = String.format("%.3f", in[i]);
-        }
-        return ret;
     }
 }

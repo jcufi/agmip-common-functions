@@ -46,10 +46,10 @@ public class SoilHelperTest {
             HashMap data = JSONAdapter.fromJSON(line);
             SoilHelper.getRootDistribution(m, pp, rd, data);
             acctual = getObjectOr((HashMap) getObjectOr(data, "soils", new ArrayList()).get(0), "soilLayer", new ArrayList());
-            File f = new File("RootDistJson.txt");
-            BufferedOutputStream bo = new BufferedOutputStream(new FileOutputStream(f));
-            bo.write(JSONAdapter.toJSON(data).getBytes());
-            bo.close();
+//            File f = new File("RootDistJson.txt");
+//            BufferedOutputStream bo = new BufferedOutputStream(new FileOutputStream(f));
+//            bo.write(JSONAdapter.toJSON(data).getBytes());
+//            bo.close();
 //            f.delete();
         }
 
