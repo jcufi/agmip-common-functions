@@ -2,7 +2,7 @@ package org.agmip.functions;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
 import static org.agmip.util.MapUtil.*;
 
@@ -67,7 +67,7 @@ public class ExperimentHelper {
                 }
             } else {
                 // Case for whole experiment data structure
-                wthData = getObjectOr(expData, "weather", new LinkedHashMap());
+                wthData = getObjectOr(expData, "weather", new HashMap());
                 if (wthData.isEmpty()) {
                     dailyData = getObjectOr(expData, "dailyWeather", new ArrayList());
                 } else {
@@ -211,4 +211,10 @@ public class ExperimentHelper {
     private static boolean isSameDate(String date1, String date2, String separator) {
         return date1.equals(date2) || date1.equals(date2.replaceAll(separator, ""));
     }
+
+    /**
+     * Offset a value by a constant.
+     * @param initial Initial value to offset (either a static number OR date OR variable)
+     * @param offset The amount to offset the <code>initial</code>
+     */
 }
