@@ -2,7 +2,7 @@ package org.agmip.functions;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
 import static org.agmip.util.MapUtil.*;
 import org.slf4j.Logger;
@@ -91,7 +91,7 @@ public class ExperimentHelper {
                     LOG.error("NO EXPERIMENT DATA.");
                     return;
                 } else {
-                    Map mgnData = getObjectOr(expData, "management", new LinkedHashMap());
+                    Map mgnData = getObjectOr(expData, "management", new HashMap());
                     eventData = getObjectOr(mgnData, "events", new ArrayList());
                 }
                 try {
@@ -246,7 +246,7 @@ public class ExperimentHelper {
         public Event(ArrayList<Map> events) {
             this.events = events;
             getNextPlEventIndex();
-            template = new LinkedHashMap();
+            template = new HashMap();
             if (next < events.size()) {
                 template.putAll(events.get(next));
             }
@@ -273,7 +273,7 @@ public class ExperimentHelper {
             if (next < events.size()) {
                 events.get(next).put("date", pdate);
             } else {
-                Map tmp = new LinkedHashMap();
+                Map tmp = new HashMap();
                 tmp.putAll(template);
                 tmp.put("date", pdate);
                 events.add(tmp);
@@ -373,4 +373,12 @@ public class ExperimentHelper {
         }
         return dailyData.size();
     }
+
+    /**
+     * Offset a value by a constant.
+     *
+     * @param initial Initial value to offset (either a static number OR date OR
+     * variable)
+     * @param offset The amount to offset the <code>initial</code>
+     */
 }
