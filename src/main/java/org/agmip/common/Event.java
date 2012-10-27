@@ -44,7 +44,7 @@ public class Event {
     /**
      * Set template with selected event type
      */
-    private void setTemplate() {
+    public void setTemplate() {
         template = new HashMap();
         if (next < events.size()) {
             template.putAll(events.get(next));
@@ -80,6 +80,18 @@ public class Event {
      *
      * @param key The variable's key for a event
      * @param value The input value for the key
+     * @toNext True for got to next event
+     */
+    public void updateEvent(String key, String value, boolean toNext) {
+        updateEvent(key, value, true, toNext);
+    }
+
+    /**
+     * Update the current event with given key and value, if current event not
+     * available, add a new one into array
+     *
+     * @param key The variable's key for a event
+     * @param value The input value for the key
      * @useTemp True for use template to create new event
      * @toNext True for got to next event
      */
@@ -93,11 +105,7 @@ public class Event {
             } else {
                 tmp = addEvent(null, useTemp);
             }
-            if (useTemp) {
-                tmp.putAll(template);
-            } else {
-                tmp.put("event", eventType);
-            }
+            tmp.putAll(template);
             tmp.put(key, value);
         }
         if (toNext) {

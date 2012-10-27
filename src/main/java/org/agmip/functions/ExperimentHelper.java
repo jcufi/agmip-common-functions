@@ -5,6 +5,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import org.agmip.common.Event;
+import static org.agmip.common.Functions.*;
 import static org.agmip.util.MapUtil.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -382,15 +383,32 @@ public class ExperimentHelper {
         return dailyData.size();
     }
 
-    public static void getFertDistribution(String num, String fecd, String feacd, String fedep, String[] days, String[] ptps, HashMap data) {
+    /**
+     * Often the total amount of fertilizer in a growing season has been
+     * recorded, but no details of application dates, types of fertilizer,etc.
+     * This function allows a user to specify rules for fertilizer application
+     * in a region. As a result, "N" fertilizer events are added to the JSON
+     * object.
+     *
+     * @param num Number of fertilizer applications
+     * @param fecd The code for type of fertilizer added
+     * @param feacd The code for fertilizer application method
+     * @param fedep The depth at which fertilizer is applied (cm)
+     * @param offsets The array of date as offset from planting date (days)
+     * (must be paired with ptps)
+     * @param ptps The array of proportion of total N added (%) (must be paired
+     * with offsets)
+     * @param data The experiment data holder
+     */
+    public static void getFertDistribution(String num, String fecd, String feacd, String fedep, String[] offsets, String[] ptps, HashMap data) {
         int iNum;
         Map expData;
         ArrayList<Map> eventData;
         double fen_tot;
-        int[] iDays;
+        String[] fdates;
         double[] dPtps;
         Event events;
-        Calendar pdate = Calendar.getInstance();
+        String pdate;
 
         try {
             iNum = Integer.parseInt(num);
@@ -400,7 +418,7 @@ public class ExperimentHelper {
         }
 
         // Check if the two input array have "num" pairs of these data
-        if (iNum != days.length || iNum != ptps.length) {
+        if (iNum != offsets.length || iNum != ptps.length) {
             LOG.error("THE SPECIFIC DATA TO EACH APPLICATION MUST HAVE " + num + " PAIRS OF THESE DATA");
             return;
         }
@@ -422,7 +440,7 @@ public class ExperimentHelper {
 
             // Check FEN_TOT is avalaible
             try {
-                fen_tot = Double.parseDouble(getValueOr(expData, "fen_tot", ""));
+                fen_tot = Double.parseDouble(getValueOr(expData, "fen_tot", "")); // TODO will be replace by generic getting method
             } catch (Exception e) {
                 LOG.error("FEN_TOT IS INVALID");
                 return;
@@ -431,8 +449,8 @@ public class ExperimentHelper {
             // Check planting date is avalaible
             events = new Event(eventData, "planting");
             if (events.isEventExist()) {
-                String date = getValueOr(events.getCurrentEvent(), "date", "");
-                if (!isValidDate(date, pdate, "")) {
+                pdate = getValueOr(events.getCurrentEvent(), "date", "");
+                if (convertFromAgmipDateString(pdate) == null) {
                     LOG.error("PLANTING DATE IS MISSING");
                     return;
                 }
@@ -440,41 +458,96 @@ public class ExperimentHelper {
                 LOG.error("PLANTING EVENT IS MISSING");
                 return;
             }
-            try {
-                fen_tot = Double.parseDouble(getValueOr(expData, "fen_tot", ""));
-            } catch (Exception e) {
-                LOG.error("FEN_TOT IS INVALID");
-                return;
-            }
-
-
         }
 
         // Check input days and ptps
         try {
-            iDays = new int[iNum];
+            fdates = new String[iNum];
             dPtps = new double[iNum];
             for (int i = 0; i < iNum; i++) {
-                iDays[i] = Integer.parseInt(days[i]);
+                fdates[i] = dateOffset(pdate, offsets[i]);
+                if (fdates[i] == null) {
+                    LOG.error("INVALID OFFSET NUMBER OF DAYS [" + offsets[i] + "]");
+                    return;
+                }
                 dPtps[i] = Double.parseDouble(ptps[i]);
             }
         } catch (Exception e) {
-            LOG.error("PAIR DATA IS IN VALID");
+            LOG.error("PAIR DATA IS IN VALID [" + e.getMessage() + "]");
             return;
         }
 
-        int last = 0;
         events.setEventType("fertilizer");
         for (int i = 0; i < iNum; i++) {
-            // calculate fertilizer date
-            pdate.add(Calendar.DATE, iDays[i] - last);
-            last = iDays[i];
             // Create event map
-            Map event = events.addEvent(String.format("%1$4d%2$2d%3$2d", pdate.get(Calendar.YEAR), pdate.get(Calendar.MONTH) + 1, pdate.get(Calendar.DATE)), true);
+            Map event = events.addEvent(fdates[i], true);
             event.put("fecd", fecd);
             event.put("feacd", feacd);
             event.put("fedep", fedep);
             event.put("feamn", String.format("%5.0f", fen_tot * dPtps[i]));
+        }
+    }
+
+    /**
+     * Organic matter applications include manure, crop residues, etc. As a
+     * result, the organic matter application event is updated with missing
+     * data.
+     *
+     * @param offset application date as days before (-) or after (+) planting date (days)
+     * @param omcd code for type of fertilizer added    
+     * @param omc2n C:N ratio for applied organic matter
+     * @param omdep depth at which organic matter is incorporated (cm)
+     * @param ominp percentage incorporation of organic matter (%)
+     * @param data The experiment data holder
+     */
+    public static void getOMDistribution(String offset, String omcd, String omc2n, String omdep, String ominp, HashMap data) {
+
+        String omamt;
+        ArrayList<Map> eventData;
+        Event events;
+        String pdate;
+        String odate;
+
+        // Check if experiment data is available
+        ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
+        if (exps.isEmpty()) {
+            LOG.error("NO EXPERIMENT DATA.");
+            return;
+        } else {
+            Map expData = exps.get(0);
+            if (expData.isEmpty()) {
+                LOG.error("NO EXPERIMENT DATA.");
+                return;
+            } else {
+                Map mgnData = getObjectOr(expData, "management", new HashMap());
+                eventData = getObjectOr(mgnData, "events", new ArrayList());
+
+            }
+            omamt = getValueOr(expData, "omamt", ""); // TODO will be replace by generic getting method
+
+        }
+
+        // Get planting date and om_date
+        events = new Event(eventData, "planting");
+        pdate = (String) events.getCurrentEvent().get("date");
+        if (pdate == null || pdate.equals("")) {
+            LOG.error("PLANTING DATE IS NOT AVAILABLE");
+        }
+        odate = dateOffset(pdate, offset);
+        if (odate == null) {
+            LOG.error("INVALID OFFSET NUMBER OF DAYS [" + offset + "]");
+        }
+
+        // Update organic material event
+        events.setEventType("organic-materials");
+        while(events.isEventExist()) {
+            events.updateEvent("date", odate, false);
+            events.updateEvent("omcd", omcd, false);
+            events.updateEvent("omamt", omamt, false);
+            events.updateEvent("omc2n", omc2n, false);
+            events.updateEvent("omdep", omdep, false);
+            events.updateEvent("ominp", ominp, true);
+            events.setTemplate();
         }
     }
 }
