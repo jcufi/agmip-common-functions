@@ -2,6 +2,7 @@ package org.agmip.functions;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import static org.agmip.util.MapUtil.*;
 import static org.agmip.util.assume.Command.*;
 import static org.agmip.ace.util.AcePathfinderUtil.insertValue;
@@ -32,14 +33,11 @@ public class SoilHelper {
         double dM;
         double dK;
 //        ArrayList<HashMap<String, Object>> soilLayers = traverseAndGetSiblings(data, "sllb");
-        ArrayList<HashMap> soils = getObjectOr(data, "soils", new ArrayList());
-        if (soils.isEmpty()) {
-            LOG.error("SOIL DATA IS EMPTY");
-            return;
-        }
-        ArrayList<HashMap<String, Object>> soilLayers = getObjectOr(soils.get(0), "soilLayer", new ArrayList());
+        ArrayList<HashMap<String, Object>> soilLayers = getSoilLayer(data);
 
-        if (soilLayers.isEmpty()) {
+        if (soilLayers == null) {
+            return;
+        } else if (soilLayers.isEmpty()) {
             LOG.error("SOIL LAYER DATA IS EMPTY");
             return;
         } else {
@@ -134,5 +132,20 @@ public class SoilHelper {
      */
     protected static String getGrowthFactor(double mid, double pp, double k, int prec) {
         return String.format("%." + prec + "f", getGrowthFactor(mid, pp, k, 1, prec));
+    }
+
+    /**
+     * Get soil layer data array from data holder. Only get the first soil site.
+     *
+     * @param data The experiment data holder
+     * @return
+     */
+    protected static ArrayList getSoilLayer(Map data) {
+        ArrayList<HashMap> soils = getObjectOr(data, "soils", new ArrayList());
+        if (soils.isEmpty()) {
+            LOG.error("SOIL DATA IS EMPTY");
+            return null;
+        }
+        return getObjectOr(soils.get(0), "soilLayer", new ArrayList());
     }
 }

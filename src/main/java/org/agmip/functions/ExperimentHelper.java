@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.agmip.common.Event;
 import static org.agmip.common.Functions.*;
+import static org.agmip.functions.SoilHelper.*;
 import static org.agmip.util.MapUtil.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -493,8 +494,9 @@ public class ExperimentHelper {
      * result, the organic matter application event is updated with missing
      * data.
      *
-     * @param offset application date as days before (-) or after (+) planting date (days)
-     * @param omcd code for type of fertilizer added    
+     * @param offset application date as days before (-) or after (+) planting
+     * date (days)
+     * @param omcd code for type of fertilizer added
      * @param omc2n C:N ratio for applied organic matter
      * @param omdep depth at which organic matter is incorporated (cm)
      * @param ominp percentage incorporation of organic matter (%)
@@ -540,14 +542,103 @@ public class ExperimentHelper {
 
         // Update organic material event
         events.setEventType("organic-materials");
-        while(events.isEventExist()) {
+        if (events.isEventExist()) {
             events.updateEvent("date", odate, false);
             events.updateEvent("omcd", omcd, false);
             events.updateEvent("omamt", omamt, false);
             events.updateEvent("omc2n", omc2n, false);
             events.updateEvent("omdep", omdep, false);
             events.updateEvent("ominp", ominp, true);
-            events.setTemplate();
+        }
+    }
+
+    /**
+     * Calculate Stable C (g[C]/100g[soil]) fraction distribution in soil layers
+     * and save the result into initial condition layers
+     *
+     * @param som3_0 fraction of total soil organic C which is stable, at
+     * surface (fraction)
+     * @param pp depth of topsoil where maximum SOM3 fraction is relatively
+     * constant (cm)
+     * @param rd depth at which soil C is relatively stable (~98% stable C) (cm)
+     * @param data The experiment data holder
+     */
+    public static void getStableCDistribution(String som3_0, String pp, String rd, HashMap data) {
+
+        ArrayList<Map> icLayers;
+        ArrayList<HashMap<String, Object>> soilLayers;
+        double dSom3_0;
+        double dPp;
+        double dRd;
+        double dK;
+        double dSom2_0;
+        double dF;
+        double dSom3_fac;
+        double[] dSllbs;
+        double[] dSlocs;
+        double mid;
+
+        try {
+            dSom3_0 = Double.parseDouble(som3_0);
+            dPp = Double.parseDouble(pp);
+            dRd = Double.parseDouble(rd);
+            dK = Math.log(0.02) / (dRd - dPp);
+            dSom2_0 = 0.95 * (1 - dSom3_0);
+        } catch (Exception e) {
+            LOG.error("INVALID INPUT FOR NUMBERIC VALUE");
+            return;
+        }
+
+        soilLayers = getSoilLayer(data);
+        if (soilLayers == null) {
+            return;
+        } else if (soilLayers.isEmpty()) {
+            LOG.error("SOIL LAYER DATA IS EMPTY");
+            return;
+        } else {
+            try {
+                dSllbs = new double[soilLayers.size()];
+                dSlocs = new double[soilLayers.size()];
+                for (int i = 0; i < soilLayers.size(); i++) {
+                    dSllbs[i] = Double.parseDouble(getObjectOr(soilLayers.get(i), "sllb", "").toString());
+                    dSlocs[i] = Double.parseDouble(getObjectOr(soilLayers.get(i), "sloc", "").toString());
+                }
+            } catch (NumberFormatException e) {
+                LOG.error("INVALID NUMBER FOR SLOC OR SLLB IN DATA [" + e.getMessage() + "]");
+                return;
+            }
+        }
+
+        // Check if initial condition layer data is available
+        ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
+        if (exps.isEmpty()) {
+            LOG.error("NO EXPERIMENT DATA.");
+            return;
+        } else {
+            Map expData = exps.get(0);
+            if (expData.isEmpty()) {
+                LOG.error("NO EXPERIMENT DATA.");
+                return;
+            } else {
+                Map icData = getObjectOr(expData, "initial_conditions", new HashMap());
+                icLayers = getObjectOr(icData, "soilLayer", new ArrayList());
+                if (icLayers.isEmpty()) {
+                    LOG.error("NO INITIAL CONDITION DATA.");
+                    return;
+                } else if (icLayers.size() != soilLayers.size()) {
+                    LOG.error("THE LAYER DATA IN THE INITIAL CONDITION SECTION IS NOT MATCHED WITH SOIL SECTION");
+                    return;
+                }
+            }
+        }
+
+        double last = 0;
+        for (int i = 1; i < icLayers.size(); i++) {
+            mid = dSllbs[i] - last;
+            last = dSllbs[i];
+            dF = getGrowthFactor(mid, dPp, dK, dSom2_0);
+            dSom3_fac = 1 - Math.max(0.02, dF) / 0.95;
+            icLayers.get(i).put("slsc", String.format("%5.2f", dSlocs[i] * dSom3_fac));
         }
     }
 }
