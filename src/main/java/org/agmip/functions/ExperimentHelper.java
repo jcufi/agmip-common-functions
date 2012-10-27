@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import org.agmip.common.Event;
 import static org.agmip.util.MapUtil.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +53,7 @@ public class ExperimentHelper {
         // Validation for input parameters
         // Weather data check and try to get daily data
         if (data.isEmpty()) {
+            LOG.error("NO ANY DATA.");
             return;
         } else {
             // Case for multiple data json structure
@@ -114,19 +116,20 @@ public class ExperimentHelper {
                 windows = new Window[expDur];
             }
         } else {
+            LOG.error("NO EXPERIMENT DATA.");
             return;
         }
 
         // Check if there is eventData existing
         if (eventData.isEmpty()) {
             LOG.warn("EMPTY EVENT DATA.");
-            event = new Event(new ArrayList());
+            event = new Event(new ArrayList(), "planting");
         } else {
-            event = new Event(eventData);
+            event = new Event(eventData, "planting");
             // If only one year is to be simulated, the recorded planting date year will be used (if available).
             if (expDur == 1) {
-                if (event.isPlEventExist()) {
-                    Map plEvent = event.events.get(event.next);
+                if (event.isEventExist()) {
+                    Map plEvent = event.getCurrentEvent();
                     try {
                         startYear = Integer.parseInt(getValueOr(plEvent, "date", "").substring(0, 4));
                     } catch (Exception e) {
@@ -236,7 +239,7 @@ public class ExperimentHelper {
                 }
 //                LOG.debug(getValueOr(dailyData.get(j), "w_date", "") + " : " + accRainAmt + ", " + (accRainAmt >= accRainAmtTotal));
                 if (accRainAmt >= accRainAmtTotal) {
-                    event.updatePlEvent(getValueOr(dailyData.get(j), "w_date", ""));
+                    event.updateEvent("date", getValueOr(dailyData.get(j), "w_date", ""));
                     break;
                 }
             }
@@ -249,7 +252,7 @@ public class ExperimentHelper {
             if (last > windows[i].end) {
                 LOG.info("NO APPROPRIATE DATE WAS FOUND FOR NO." + (i + 1) + " PLANTING EVENT");
                 // TODO remove one planting event
-                event.removePlEvent();
+                event.removeEvent();
             }
 
             // Check following days
@@ -263,7 +266,7 @@ public class ExperimentHelper {
                 }
 //                LOG.debug(getValueOr(dailyData.get(j), "w_date", "") + " : " + accRainAmt + ", " + (accRainAmt >= accRainAmtTotal));
                 if (accRainAmt >= accRainAmtTotal) {
-                    event.updatePlEvent(getValueOr(dailyData.get(j), "w_date", ""));
+                    event.updateEvent("date", getValueOr(dailyData.get(j), "w_date", ""));
                     break;
                 }
             }
@@ -285,77 +288,6 @@ public class ExperimentHelper {
     }
 
     /**
-     * To handle the planting event in the event data array
-     */
-    private static class Event {
-
-        public int next = -1;
-        public Map template;
-        public ArrayList<Map> events;
-
-        /**
-         * Constructor
-         *
-         * @param events The event data array
-         */
-        public Event(ArrayList<Map> events) {
-            this.events = events;
-            getNextPlEventIndex();
-            template = new HashMap();
-            if (next < events.size()) {
-                template.putAll(events.get(next));
-            }
-        }
-
-        /**
-         * Remove the current planting event data if available
-         */
-        public void removePlEvent() {
-            if (next < events.size()) {
-                events.remove(next);
-                next--;
-                getNextPlEventIndex();
-            }
-        }
-
-        /**
-         * Update the current planting event with given pdate, if current event
-         * not available, add a new one into array
-         *
-         * @param pdate The planting date
-         */
-        public void updatePlEvent(String pdate) {
-            if (next < events.size()) {
-                events.get(next).put("date", pdate);
-            } else {
-                Map tmp = new HashMap();
-                tmp.putAll(template);
-                tmp.put("date", pdate);
-                events.add(tmp);
-            }
-            getNextPlEventIndex();
-        }
-
-        /**
-         * Move index to the next planting event
-         */
-        private void getNextPlEventIndex() {
-            for (int i = next + 1; i < events.size(); i++) {
-                String evName = getValueOr(events.get(i), "event", "");
-                if (evName.equals("planting")) {
-                    next = i;
-                    return;
-                }
-            }
-            next = events.size();
-        }
-
-        public boolean isPlEventExist() {
-            return next >= 0 && next < events.size();
-        }
-    }
-
-    /**
      * To check if the input date string is valid and match with the required
      * format
      *
@@ -369,12 +301,18 @@ public class ExperimentHelper {
     private static boolean isValidDate(String date, Calendar out, String separator) {
         try {
             String[] dates = date.split(separator);
-            out.set(Calendar.MONTH, Integer.parseInt(dates[0]) - 1);
-            out.set(Calendar.DATE, Integer.parseInt(dates[1]));
+            out.set(Calendar.DATE, Integer.parseInt(dates[dates.length - 1]));
+            out.set(Calendar.MONTH, Integer.parseInt(dates[dates.length - 2]));
+            if (dates.length > 2) {
+                out.set(Calendar.YEAR, Integer.parseInt(dates[dates.length - 3]));
+            }
         } catch (Exception e) {
             try {
-                out.set(Calendar.MONTH, Integer.parseInt(date.substring(0, 2)) - 1);
-                out.set(Calendar.DATE, Integer.parseInt(date.substring(2, 4)));
+                out.set(Calendar.DATE, Integer.parseInt(date.substring(date.length() - 2, date.length())));
+                out.set(Calendar.MONTH, Integer.parseInt(date.substring(date.length() - 4, date.length() - 2)) - 1);
+                if (date.length() > 4) {
+                    out.set(Calendar.YEAR, Integer.parseInt(date.substring(date.length() - 8, date.length() - 4)) - 1);
+                }
             } catch (Exception e2) {
                 return false;
             }
@@ -409,6 +347,17 @@ public class ExperimentHelper {
         return date1.endsWith(date2);
     }
 
+    /**
+     * Find the index of daily data array for the particular date
+     *
+     * @param dailyData The array of daily data
+     * @param findDate The expected date
+     * @param start The start index for searching
+     * @param expectedDiff The default difference between start index and
+     * expected index (will try this index first, if failed then start loop)
+     * @return The index for the expected date, if no matching data, will return
+     * the size of array
+     */
     private static int getDailyRecIndex(ArrayList<Map> dailyData, String findDate, int start, int expectedDiff) {
         String date;
         if (start + expectedDiff < dailyData.size()) {
@@ -432,11 +381,100 @@ public class ExperimentHelper {
         }
         return dailyData.size();
     }
-    /**
-     * Offset a value by a constant.
-     *
-     * @param initial Initial value to offset (either a static number OR date OR
-     * variable)
-     * @param offset The amount to offset the <code>initial</code>
-     */
+
+    public static void getFertDistribution(String num, String fecd, String feacd, String fedep, String[] days, String[] ptps, HashMap data) {
+        int iNum;
+        Map expData;
+        ArrayList<Map> eventData;
+        double fen_tot;
+        int[] iDays;
+        double[] dPtps;
+        Event events;
+        Calendar pdate = Calendar.getInstance();
+
+        try {
+            iNum = Integer.parseInt(num);
+        } catch (Exception e) {
+            LOG.error("INPUT NUMBER OF FERTILIZER APPLICATIONS IS NOT A NUMBERIC STRING [" + num + "]");
+            return;
+        }
+
+        // Check if the two input array have "num" pairs of these data
+        if (iNum != days.length || iNum != ptps.length) {
+            LOG.error("THE SPECIFIC DATA TO EACH APPLICATION MUST HAVE " + num + " PAIRS OF THESE DATA");
+            return;
+        }
+
+        // Check if experiment data is available
+        ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
+        if (exps.isEmpty()) {
+            LOG.error("NO EXPERIMENT DATA.");
+            return;
+        } else {
+            expData = exps.get(0);
+            if (expData.isEmpty()) {
+                LOG.error("NO EXPERIMENT DATA.");
+                return;
+            } else {
+                Map mgnData = getObjectOr(expData, "management", new HashMap());
+                eventData = getObjectOr(mgnData, "events", new ArrayList());
+            }
+
+            // Check FEN_TOT is avalaible
+            try {
+                fen_tot = Double.parseDouble(getValueOr(expData, "fen_tot", ""));
+            } catch (Exception e) {
+                LOG.error("FEN_TOT IS INVALID");
+                return;
+            }
+
+            // Check planting date is avalaible
+            events = new Event(eventData, "planting");
+            if (events.isEventExist()) {
+                String date = getValueOr(events.getCurrentEvent(), "date", "");
+                if (!isValidDate(date, pdate, "")) {
+                    LOG.error("PLANTING DATE IS MISSING");
+                    return;
+                }
+            } else {
+                LOG.error("PLANTING EVENT IS MISSING");
+                return;
+            }
+            try {
+                fen_tot = Double.parseDouble(getValueOr(expData, "fen_tot", ""));
+            } catch (Exception e) {
+                LOG.error("FEN_TOT IS INVALID");
+                return;
+            }
+
+
+        }
+
+        // Check input days and ptps
+        try {
+            iDays = new int[iNum];
+            dPtps = new double[iNum];
+            for (int i = 0; i < iNum; i++) {
+                iDays[i] = Integer.parseInt(days[i]);
+                dPtps[i] = Double.parseDouble(ptps[i]);
+            }
+        } catch (Exception e) {
+            LOG.error("PAIR DATA IS IN VALID");
+            return;
+        }
+
+        int last = 0;
+        events.setEventType("fertilizer");
+        for (int i = 0; i < iNum; i++) {
+            // calculate fertilizer date
+            pdate.add(Calendar.DATE, iDays[i] - last);
+            last = iDays[i];
+            // Create event map
+            Map event = events.addEvent(String.format("%1$4d%2$2d%3$2d", pdate.get(Calendar.YEAR), pdate.get(Calendar.MONTH) + 1, pdate.get(Calendar.DATE)), true);
+            event.put("fecd", fecd);
+            event.put("feacd", feacd);
+            event.put("fedep", fedep);
+            event.put("feamn", String.format("%5.0f", fen_tot * dPtps[i]));
+        }
+    }
 }
