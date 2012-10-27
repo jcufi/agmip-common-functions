@@ -46,6 +46,7 @@ public class ExperimentHelper {
         double accRainAmtTotal;
         double accRainAmt;
         int expDur;
+        int startYear = 0;
         Window[] windows;
 
         // Validation for input parameters
@@ -94,10 +95,21 @@ public class ExperimentHelper {
                     Map mgnData = getObjectOr(expData, "management", new HashMap());
                     eventData = getObjectOr(mgnData, "events", new ArrayList());
                 }
+
+                // Check EXP_DUR is avalaible
                 try {
                     expDur = Integer.parseInt(getValueOr(expData, "exp_dur", "1"));
                 } catch (Exception e) {
                     expDur = 1;
+                }
+
+                // The starting year for multiple year runs may be set with SC_YEAR.
+                if (expDur > 1) {
+                    try {
+                        startYear = Integer.parseInt(getValueOr(expData, "sc_year", "").substring(0, 4));
+                    } catch (Exception e) {
+                        startYear = 0;
+                    }
                 }
                 windows = new Window[expDur];
             }
@@ -105,11 +117,54 @@ public class ExperimentHelper {
             return;
         }
 
+        // Check if there is eventData existing
         if (eventData.isEmpty()) {
             LOG.warn("EMPTY EVENT DATA.");
             event = new Event(new ArrayList());
         } else {
             event = new Event(eventData);
+            // If only one year is to be simulated, the recorded planting date year will be used (if available).
+            if (expDur == 1) {
+                if (event.isPlEventExist()) {
+                    Map plEvent = event.events.get(event.next);
+                    try {
+                        startYear = Integer.parseInt(getValueOr(plEvent, "date", "").substring(0, 4));
+                    } catch (Exception e) {
+                        startYear = 0;
+                    }
+                } else {
+                    startYear = 0;
+                }
+            }
+        }
+
+        // If no starting year is provided, the multiple years will begin on the first available weather year.
+        int startYearIndex;
+        if (startYear == 0) {
+            startYearIndex = 0;
+        } else {
+            startYearIndex = dailyData.size();
+            for (int i = 0; i < dailyData.size(); i++) {
+                String w_date = getValueOr(dailyData.get(i), "w_date", "");
+                if (w_date.equals(startYear + "0101")) {
+                    startYearIndex = i;
+                    break;
+                } else if (w_date.endsWith("0101")) {
+                    i += 364;
+                }
+            }
+
+            // If start year is out of weather data range
+            if (startYearIndex == dailyData.size()) {
+                // If one year duration, then use the first year
+                if (expDur == 1) {
+                    startYearIndex = 0;
+                } // If multiple year duration, then report error and end function
+                else {
+                    LOG.error("THE START YEAR IS OUT OF DATA RANGE (SC_YEAR:[" + startYear + "]");
+                    return;
+                }
+            }
         }
 
         // Check input dates
@@ -152,7 +207,7 @@ public class ExperimentHelper {
 
         // Find the first record which is the ealiest date for the window in each year
         int end;
-        int start = getDailyRecIndex(dailyData, eDate, 0, 0);
+        int start = getDailyRecIndex(dailyData, eDate, startYearIndex, 0);
         for (int i = 0; i < windows.length; i++) {
             end = getDailyRecIndex(dailyData, lDate, start, duration);
             windows[i] = new Window(start, end);
@@ -294,6 +349,10 @@ public class ExperimentHelper {
             }
             next = events.size();
         }
+
+        public boolean isPlEventExist() {
+            return next >= 0 && next < events.size();
+        }
     }
 
     /**
@@ -373,7 +432,6 @@ public class ExperimentHelper {
         }
         return dailyData.size();
     }
-
     /**
      * Offset a value by a constant.
      *

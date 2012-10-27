@@ -59,15 +59,50 @@ public class ExperimentHelperTest {
         assertEquals("getAutoPlantingDate: no date find case", expected_2, acctual_2);
         
     }
-    
-    
+
+    @Test
+    public void testGetAutoPlantingDate_oneYear() throws IOException, Exception {
+        String line;
+        String startDate = "03-01";
+        String endDate = "04-01";
+        String accRainAmt = "9.0";
+        String dayNum = "6";
+        String expected_1 = "19990310"; // TODO
+        int expected_2 = 2;
+        String acctual_1 = "";
+        int acctual_2 = 0;
+
+        BufferedReader br = new BufferedReader(
+                new InputStreamReader(
+                new FileInputStream(resource2.getPath())));
+
+        if ((line = br.readLine()) != null) {
+            
+            Map<String, ArrayList<Map>> data = new LinkedHashMap<String, ArrayList<Map>>();
+            Map<String, Object> expData =  JSONAdapter.fromJSON(line);
+            data.put("experiments", new ArrayList());
+            data.put("weathers", new ArrayList());
+            data.get("experiments").add(expData);
+            data.get("weathers").add((Map) expData.get("weather"));
+            expData.put("sc_year", "1982");
+            ExperimentHelper.getAutoPlantingDate(startDate, endDate, accRainAmt, dayNum, data);
+            Map<String, ArrayList> mgnData = (Map) expData.get("management");
+            ArrayList<Map<String, String>> events = mgnData.get("events");
+            acctual_1 = events.get(0).get("date");
+            acctual_2 = events.size();
+        }
+        
+        assertEquals("getAutoPlantingDate: normal case", expected_1, acctual_1);
+        assertEquals("getAutoPlantingDate: no date find case", expected_2, acctual_2);
+        
+    }
 
     @Test
     public void testGetAutoPlantingDate_machakos() throws IOException, Exception {
         String line;
         String startDate = "01-15";
         String endDate = "02-28";
-        String accRainAmt = "9";
+        String accRainAmt = "9.0";
         String dayNum = "6";
         String expected_1 = "19800124";
         String expected_2 = "19810218";
@@ -100,6 +135,52 @@ public class ExperimentHelperTest {
         assertEquals("getAutoPlantingDate: normal case", expected_1, acctual_1);
         assertEquals("getAutoPlantingDate: copy case", expected_2, acctual_2);
         assertEquals("getAutoPlantingDate: no date find case", expected_3, acctual_3);
+        
+    }
+    
+    @Test
+    public void testGetAutoPlantingDate_machakos_scYear() throws IOException, Exception {
+        String line;
+        String startDate = "01-15";
+        String endDate = "02-28";
+        String accRainAmt = "9.0";
+        String dayNum = "6";
+        String expected_1 = "19830214";
+        String expected_2 = "19840131";
+        String expected_3 = "19850202";
+        int expected_99 = 4;
+        String acctual_1 = "";
+        String acctual_2 = "";
+        String acctual_3 = "";
+        int acctual_99 = 0;
+
+        BufferedReader br = new BufferedReader(
+                new InputStreamReader(
+                new FileInputStream(resource2.getPath())));
+
+        if ((line = br.readLine()) != null) {
+            
+            Map<String, ArrayList<Map>> data = new LinkedHashMap<String, ArrayList<Map>>();
+            Map<String, Object> expData =  JSONAdapter.fromJSON(line);
+            data.put("experiments", new ArrayList());
+            data.put("weathers", new ArrayList());
+            data.get("experiments").add(expData);
+            data.get("weathers").add((Map) expData.get("weather"));
+            expData.put("exp_dur", "3");
+            expData.put("sc_year", "1983");
+            ExperimentHelper.getAutoPlantingDate(startDate, endDate, accRainAmt, dayNum, data);
+            Map<String, ArrayList> mgnData = (Map) expData.get("management");
+            ArrayList<Map<String, String>> events = mgnData.get("events");
+            acctual_1 = events.get(0).get("date");
+            acctual_2 = events.get(2).get("date");
+            acctual_3 = events.get(3).get("date");
+            acctual_99 = events.size();
+        }
+        
+        assertEquals("getAutoPlantingDate: normal 1st year case with start year", expected_1, acctual_1);
+        assertEquals("getAutoPlantingDate: normal 2nd year case with start year", expected_2, acctual_2);
+        assertEquals("getAutoPlantingDate: normal 3rd year case with start year", expected_3, acctual_3);
+        assertEquals("getAutoPlantingDate: all year with auto-planting case", expected_99, acctual_99);
         
     }
 }
