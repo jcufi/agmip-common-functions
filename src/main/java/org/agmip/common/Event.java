@@ -30,6 +30,10 @@ public class Event {
         setTemplate();
     }
 
+    /**
+     * Set event type and refresh the internal attributes
+     * @param eventType The event type for handling
+     */
     public void setEventType(String eventType) {
         this.eventType = eventType;
         next = -1;
@@ -37,6 +41,9 @@ public class Event {
         setTemplate();
     }
 
+    /**
+     * Set template with selected event type
+     */
     private void setTemplate() {
         template = new HashMap();
         if (next < events.size()) {
@@ -98,6 +105,13 @@ public class Event {
         }
     }
 
+    /**
+     * Add a new event into array with selected event type and input date.
+     * 
+     * @param date The event date
+     * @param useTemp True for using template to create new data
+     * @return The generated event data map
+     */
     public Map addEvent(String date, boolean useTemp) {
         Map ret = new HashMap();
         if (useTemp) {
@@ -125,14 +139,30 @@ public class Event {
         next = events.size();
     }
 
+    /**
+     * Check if the selected event is existed in the array
+     *
+     * @return
+     */
     public boolean isEventExist() {
         return next >= 0 && next < events.size();
     }
 
+    /**
+     * Get the current pointed event
+     *
+     * @return
+     */
     public Map getCurrentEvent() {
         return events.get(next);
     }
 
+    /**
+     * Find out the insert position for the new event. If date is not available
+     * for the new event, will return the last position of array
+     *
+     * @param event The new event data
+     */
     private void getInertIndex(Map event) {
         int iDate;
         try {
