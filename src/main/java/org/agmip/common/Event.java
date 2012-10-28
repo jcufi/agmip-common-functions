@@ -179,7 +179,7 @@ public class Event {
             next = events.size();
             return;
         }
-        for (int i = next; i < events.size(); i++) {
+        for (int i = isEventExist() ? next : 0; i < events.size(); i++) {
             try {
                 if (iDate < Integer.parseInt(getValueOr(events.get(i), "date", "0"))) {
                     next = i;

@@ -485,7 +485,7 @@ public class ExperimentHelper {
             event.put("fecd", fecd);
             event.put("feacd", feacd);
             event.put("fedep", fedep);
-            event.put("feamn", String.format("%5.0f", fen_tot * dPtps[i]));
+            event.put("feamn", String.format("%.0f", fen_tot * dPtps[i] / 100));
         }
     }
 
@@ -633,12 +633,13 @@ public class ExperimentHelper {
         }
 
         double last = 0;
-        for (int i = 1; i < icLayers.size(); i++) {
-            mid = dSllbs[i] - last;
+        for (int i = 0; i < icLayers.size(); i++) {
+            mid = (dSllbs[i] + last) / 2;
             last = dSllbs[i];
             dF = getGrowthFactor(mid, dPp, dK, dSom2_0);
             dSom3_fac = 1 - Math.max(0.02, dF) / 0.95;
-            icLayers.get(i).put("slsc", String.format("%5.2f", dSlocs[i] * dSom3_fac));
+            icLayers.get(i).put("slsc", String.format("%.2f", dSlocs[i] * dSom3_fac));
+//            LOG.debug((String)icLayers.get(i).get("icbl") + ", " + (String)icLayers.get(i).get("slsc"));
         }
     }
 }
