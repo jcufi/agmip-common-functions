@@ -50,8 +50,9 @@ public class ExperimentHelperTest {
                 new FileInputStream(resource.getPath())));
 
         if ((line = br.readLine()) != null) {
-            Map<String, ArrayList<Map>> data = JSONAdapter.fromJSON(line);
-            Map<String, Object> expData = data.get("experiments").get(0);
+            HashMap<String, Object> data = JSONAdapter.fromJSON(line);
+            Map<String, Object> expData = getRawPackageContents(data, "experiments").get(0);        
+            // Map<String, Object> expData = (Map)((ArrayList) data.get("experiments")).get(0);
             expData.put("exp_dur", "2");
             ExperimentHelper.getAutoPlantingDate(startDate, endDate, accRainAmt, dayNum, data);
             Map<String, ArrayList> mgnData = (Map) expData.get("management");
@@ -290,17 +291,18 @@ public class ExperimentHelperTest {
         String pp = "20";
         String rd = "60";
         String[] expected = {"1.10", "0.55", "0.65", "0.48", "0.10", "0.10", "0.04", "0.23"};
-        ArrayList<Map> acctual = null;
+        ArrayList<HashMap<String, String>> acctual = null;
 
         BufferedReader br = new BufferedReader(
                 new InputStreamReader(
                 new FileInputStream(resource.getPath())));
 
         if ((line = br.readLine()) != null) {
-            HashMap<String, ArrayList<Map>> data = JSONAdapter.fromJSON(line);
-            Map icData = getObjectOr((HashMap) getObjectOr(data, "experiments", new ArrayList()).get(0), "initial_conditions", new HashMap());
+            HashMap<String, Object> data = JSONAdapter.fromJSON(line);
+            HashMap<String, Object> exp = getRawPackageContents(data, "experiments").get(0);
+            HashMap<String, Object> icData = (HashMap<String, Object>) getObjectOr(exp, "initial_conditions", new HashMap());
             ExperimentHelper.getStableCDistribution(som3_0, pp, rd, data);
-            acctual = getObjectOr(icData, "soilLayer", new ArrayList());
+            acctual = (ArrayList<HashMap<String, String>>) getObjectOr(icData, "soilLayer", new ArrayList());
             
             File f = new File("RootDistJson.txt");
             BufferedOutputStream bo = new BufferedOutputStream(new FileOutputStream(f));
