@@ -146,4 +146,30 @@ public class Functions {
         }
         return number.add(dOffset).toString();
     }
+
+    /**
+     * Multiply two numbers together
+     * 
+     * Any numeric string recognized by {@code BigDecimal} is supported.
+     * 
+     * @param f1 A valid number string
+     * @param f2 A valid number string
+     *
+     * @return <code>f1*f2</code>
+     *
+     * @see BigDecimal
+     */
+    public static String multiply(String f1, String f2) {
+        BigDecimal factor1;
+        BigDecimal factor2;
+
+        try {
+            factor1 = new BigDecimal(f1);
+            factor2 = new BigDecimal(f2);
+        } catch (Exception ex) {
+            return null;
+        }
+
+        return factor1.multiply(factor2).toString();
+    }
 }
