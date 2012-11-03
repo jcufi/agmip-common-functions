@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
  */
 public class SoilHelper {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ExperimentHelper.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SoilHelper.class);
 
     /**
      * Calculate root growth factor (0-1) for each soil layer
@@ -34,11 +34,12 @@ public class SoilHelper {
         double dK;
 //        ArrayList<HashMap<String, Object>> soilLayers = traverseAndGetSiblings(data, "sllb");
         ArrayList<HashMap<String, Object>> soilLayers = getSoilLayer(data);
+        // ArrayList<HashMap<String, String>> soilLayers = MapUtil.getBucket(data, "soils").getDataList();
 
         if (soilLayers == null) {
             return;
         } else if (soilLayers.isEmpty()) {
-            LOG.error("SOIL LAYER DATA IS EMPTY");
+            LOG.error("----  SOIL LAYER DATA IS EMPTY");
             return;
         } else {
             try {
@@ -141,11 +142,13 @@ public class SoilHelper {
      * @return
      */
     protected static ArrayList getSoilLayer(Map data) {
-        ArrayList<HashMap> soils = getObjectOr(data, "soils", new ArrayList());
+        HashMap soils = (HashMap) getObjectOr(data, "soil", new HashMap());
+
         if (soils.isEmpty()) {
             LOG.error("SOIL DATA IS EMPTY");
             return null;
+        } else {
+            return getObjectOr(soils, "soilLayer", new ArrayList());
         }
-        return getObjectOr(soils.get(0), "soilLayer", new ArrayList());
     }
 }

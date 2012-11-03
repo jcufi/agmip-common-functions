@@ -144,4 +144,21 @@ public class FunctionsTest {
         
         assertEquals("Numeric offset incorrect", test, numericOffset(initial, offset));
     }
+
+    @Test
+    public void multiplySimple() {
+        String test="12.34";
+        String f1 = "1234";
+        String f2 = ".01";
+
+        assertEquals("Multiply incorrect", test, multiply(f1, f2));
+    }
+
+    @Test
+    public void mutliplyIntentionalFailure() {
+        String f1 = "Hi";
+        String f2 = "12";
+
+        assertNull("This shouldn't work", multiply(f1, f2));
+    }
 }

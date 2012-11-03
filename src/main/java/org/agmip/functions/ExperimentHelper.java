@@ -1,5 +1,9 @@
 package org.agmip.functions;
 
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -403,7 +407,7 @@ public class ExperimentHelper {
      */
     public static void getFertDistribution(String num, String fecd, String feacd, String fedep, String[] offsets, String[] ptps, HashMap data) {
         int iNum;
-        Map expData;
+        //Map expData;
         ArrayList<Map> eventData;
         double fen_tot;
         String[] fdates;
@@ -425,23 +429,23 @@ public class ExperimentHelper {
         }
 
         // Check if experiment data is available
-        ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
-        if (exps.isEmpty()) {
-            LOG.error("NO EXPERIMENT DATA.");
-            return;
-        } else {
-            expData = exps.get(0);
-            if (expData.isEmpty()) {
-                LOG.error("NO EXPERIMENT DATA.");
-                return;
-            } else {
-                Map mgnData = getObjectOr(expData, "management", new HashMap());
+        //ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
+        //if (exps.isEmpty()) {
+        //    LOG.error("NO EXPERIMENT DATA.");
+        //    return;
+        //} else {
+        //    expData = exps.get(0);
+        //    if (expData.isEmpty()) {
+        //        LOG.error("NO EXPERIMENT DATA.");
+        //       return;
+        //    } else {
+                Map mgnData = getObjectOr(data, "management", new HashMap());
                 eventData = getObjectOr(mgnData, "events", new ArrayList());
-            }
+        //    }
 
             // Check FEN_TOT is avalaible
             try {
-                fen_tot = Double.parseDouble(getValueOr(expData, "fen_tot", "")); // TODO will be replace by generic getting method
+                fen_tot = Double.parseDouble(getValueOr(data, "fen_tot", "")); // TODO will be replace by generic getting method
             } catch (Exception e) {
                 LOG.error("FEN_TOT IS INVALID");
                 return;
@@ -459,7 +463,7 @@ public class ExperimentHelper {
                 LOG.error("PLANTING EVENT IS MISSING");
                 return;
             }
-        }
+        //}
 
         // Check input days and ptps
         try {
@@ -502,7 +506,7 @@ public class ExperimentHelper {
      * @param ominp percentage incorporation of organic matter (%)
      * @param data The experiment data holder
      */
-    public static void getOMDistribution(String offset, String omcd, String omc2n, String omdep, String ominp, HashMap data) {
+    public static void getOMDistribution(String offset, String omcd, String omc2n, String omdep, String ominp, String dmr, HashMap expData) {
 
         String omamt;
         ArrayList<Map> eventData;
@@ -511,44 +515,66 @@ public class ExperimentHelper {
         String odate;
 
         // Check if experiment data is available
-        ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
-        if (exps.isEmpty()) {
-            LOG.error("NO EXPERIMENT DATA.");
-            return;
-        } else {
-            Map expData = exps.get(0);
-            if (expData.isEmpty()) {
-                LOG.error("NO EXPERIMENT DATA.");
-                return;
-            } else {
+        // ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
+        // if (exps.isEmpty()) {
+        //     LOG.error("NO EXPERIMENT DATA.");
+        //     return;
+        // } else {
+        //     Map expData = exps.get(0);
+        //     if (expData.isEmpty()) {
+        //         LOG.error("NO EXPERIMENT DATA.");
+        //         return;
+        //     } else {
                 Map mgnData = getObjectOr(expData, "management", new HashMap());
                 eventData = getObjectOr(mgnData, "events", new ArrayList());
 
+        //    }
+            // Get the omamt from the first? OM event
+            Event omEvent = new Event(eventData, "organic_matter");
+            omamt = (String) omEvent.getCurrentEvent().get("omamt");
+            if (omamt == null || omamt.equals("")) {
+                LOG.error("OMAMT IS NOT AVAILABLE");
+                return;
             }
-            omamt = getValueOr(expData, "omamt", ""); // TODO will be replace by generic getting method
+            //omamt = getValueOr(expData, "omamt", ""); // TODO will be replace by generic getting method
 
-        }
+        //}
 
         // Get planting date and om_date
         events = new Event(eventData, "planting");
         pdate = (String) events.getCurrentEvent().get("date");
         if (pdate == null || pdate.equals("")) {
             LOG.error("PLANTING DATE IS NOT AVAILABLE");
+            return;
         }
         odate = dateOffset(pdate, offset);
         if (odate == null) {
             LOG.error("INVALID OFFSET NUMBER OF DAYS [" + offset + "]");
+            return;
         }
 
+        BigDecimal decDmr;
+        BigDecimal decOMC2N;
+        BigDecimal start = new BigDecimal("100.0");
+        try {
+            decDmr = new BigDecimal(dmr);
+            decOMC2N = new BigDecimal(omc2n);
+        } catch (Exception ex) {
+            LOG.error("INVALID VALUES FOR DMR and OMC2N");
+            return;
+        }
+        
+        BigDecimal omnpct = start.divide(decDmr, 2, RoundingMode.HALF_UP).divide(decOMC2N, 2, RoundingMode.HALF_UP);
         // Update organic material event
-        events.setEventType("organic-materials");
+        events.setEventType("organic_matter");
         if (events.isEventExist()) {
             events.updateEvent("date", odate, false);
             events.updateEvent("omcd", omcd, false);
             events.updateEvent("omamt", omamt, false);
             events.updateEvent("omc2n", omc2n, false);
             events.updateEvent("omdep", omdep, false);
-            events.updateEvent("ominp", ominp, true);
+            events.updateEvent("ominp", ominp, false);
+            events.updateEvent("omn%", omnpct.toString(), true);
         }
     }
 
@@ -610,17 +636,17 @@ public class ExperimentHelper {
         }
 
         // Check if initial condition layer data is available
-        ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
-        if (exps.isEmpty()) {
-            LOG.error("NO EXPERIMENT DATA.");
-            return;
-        } else {
-            Map expData = exps.get(0);
-            if (expData.isEmpty()) {
-                LOG.error("NO EXPERIMENT DATA.");
-                return;
-            } else {
-                Map icData = getObjectOr(expData, "initial_conditions", new HashMap());
+        // ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
+        // if (exps.isEmpty()) {
+        //     LOG.error("NO EXPERIMENT DATA.");
+        //     return;
+        // } else {
+        //     Map expData = exps.get(0);
+        //     if (expData.isEmpty()) {
+        //         LOG.error("NO EXPERIMENT DATA.");
+        //         return;
+        //     } else {
+                Map icData = getObjectOr(data, "initial_conditions", new HashMap());
                 icLayers = getObjectOr(icData, "soilLayer", new ArrayList());
                 if (icLayers.isEmpty()) {
                     LOG.error("NO INITIAL CONDITION DATA.");
@@ -629,8 +655,8 @@ public class ExperimentHelper {
                     LOG.error("THE LAYER DATA IN THE INITIAL CONDITION SECTION IS NOT MATCHED WITH SOIL SECTION");
                     return;
                 }
-            }
-        }
+            //}
+        //}
 
         double last = 0;
         for (int i = 0; i < icLayers.size(); i++) {
