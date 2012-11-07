@@ -615,6 +615,7 @@ public class ExperimentHelper {
         double[] dSlocs;
         double mid;
 
+        LOG.debug("Checkpoint 1");
         try {
             dSom3_0 = Double.parseDouble(som3_0);
             dPp = Double.parseDouble(pp);
@@ -646,6 +647,7 @@ public class ExperimentHelper {
             }
         }
 
+        LOG.debug("Checkpoint 2");
         // Check if initial condition layer data is available
         // ArrayList<Map> exps = getObjectOr(data, "experiments", new ArrayList());
         // if (exps.isEmpty()) {
@@ -657,25 +659,26 @@ public class ExperimentHelper {
         //         LOG.error("NO EXPERIMENT DATA.");
         //         return;
         //     } else {
-        Map icData = getObjectOr(data, "initial_conditions", new HashMap());
-        icLayers = getObjectOr(icData, "soilLayer", new ArrayList());
-        if (icLayers.isEmpty()) {
-            LOG.error("NO INITIAL CONDITION DATA.");
-            return;
-        } else if (icLayers.size() != soilLayers.size()) {
-            LOG.error("THE LAYER DATA IN THE INITIAL CONDITION SECTION IS NOT MATCHED WITH SOIL SECTION");
-            return;
-        }
-            //}
-        //}
+        // Map icData = getObjectOr(data, "soil", new HashMap());
+        // icLayers = getObjectOr(icData, "soilLayer", new ArrayList());
+        // if (icLayers.isEmpty()) {
+        //     LOG.error("NO SOIL DATA.");
+        //     return;
+        // } else if (icLayers.size() != soilLayers.size()) {
+        //     LOG.error("THE LAYER DATA IN THE INITIAL CONDITION SECTION IS NOT MATCHED WITH SOIL SECTION");
+        //     return;
+        // }
+        //     //}
+        // //}
 
+        LOG.debug("Checkpoint 3");
         double last = 0;
-        for (int i = 0; i < icLayers.size(); i++) {
+        for (int i = 0; i < soilLayers.size(); i++) {
             mid = (dSllbs[i] + last) / 2;
             last = dSllbs[i];
             dF = getGrowthFactor(mid, dPp, dK, dSom2_0);
             dSom3_fac = 1 - Math.max(0.02, dF) / 0.95;
-            icLayers.get(i).put("slsc", String.format("%.2f", dSlocs[i] * dSom3_fac));
+            soilLayers.get(i).put("slsc", String.format("%.2f", dSlocs[i] * dSom3_fac));
 //            LOG.debug((String)icLayers.get(i).get("icbl") + ", " + (String)icLayers.get(i).get("slsc"));
         }
     }

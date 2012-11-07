@@ -335,14 +335,14 @@ public class ExperimentHelperTest {
 
         //}
         HashMap<String, Object> data = new HashMap<String, Object>();
-        AcePathfinderUtil.insertValue(data, "icbl", "5");
-        AcePathfinderUtil.insertValue(data, "icbl", "15");
-        AcePathfinderUtil.insertValue(data, "icbl", "30");
-        AcePathfinderUtil.insertValue(data, "icbl", "60");
-        AcePathfinderUtil.insertValue(data, "icbl", "90");
-        AcePathfinderUtil.insertValue(data, "icbl", "120");
-        AcePathfinderUtil.insertValue(data, "icbl", "150");
-        AcePathfinderUtil.insertValue(data, "icbl", "180");
+        // AcePathfinderUtil.insertValue(data, "icbl", "5");
+        // AcePathfinderUtil.insertValue(data, "icbl", "15");
+        // AcePathfinderUtil.insertValue(data, "icbl", "30");
+        // AcePathfinderUtil.insertValue(data, "icbl", "60");
+        // AcePathfinderUtil.insertValue(data, "icbl", "90");
+        // AcePathfinderUtil.insertValue(data, "icbl", "120");
+        // AcePathfinderUtil.insertValue(data, "icbl", "150");
+        // AcePathfinderUtil.insertValue(data, "icbl", "180");
         AcePathfinderUtil.insertValue(data, "sllb", "5");
         AcePathfinderUtil.insertValue(data, "sloc", "2.00");
         AcePathfinderUtil.insertValue(data, "sllb", "15");
@@ -363,7 +363,7 @@ public class ExperimentHelperTest {
         ExperimentHelper.getStableCDistribution(som3_0, pp, rd, data);
         log.info("getStableCDistribution() output: {}", data.toString());
 
-        Map icData = (HashMap) getObjectOr(data, "initial_conditions", new HashMap());
+        Map icData = (HashMap) getObjectOr(data, "soil", new HashMap());
         acctual = getObjectOr(icData, "soilLayer", new ArrayList());
         for (int i = 0; i < expected.length; i++) {
             assertEquals("getRootDistribution: normal case " + i, expected[i], (String) acctual.get(i).get("slsc"));
