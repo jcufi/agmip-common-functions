@@ -32,6 +32,7 @@ public class Event {
 
     /**
      * Set event type and refresh the internal attributes
+     *
      * @param eventType The event type for handling
      */
     public void setEventType(String eventType) {
@@ -46,7 +47,7 @@ public class Event {
      */
     public void setTemplate() {
         template = new HashMap();
-        if (next < events.size()) {
+        if (isEventExist()) {
             template.putAll(events.get(next));
         }
         template.put("event", eventType);
@@ -56,7 +57,7 @@ public class Event {
      * Remove the current planting event data if available
      */
     public void removeEvent() {
-        if (next < events.size()) {
+        if (isEventExist()) {
             events.remove(next);
             next--;
             getNextEventIndex();
@@ -96,7 +97,7 @@ public class Event {
      * @toNext True for got to next event
      */
     public void updateEvent(String key, String value, boolean useTemp, boolean toNext) {
-        if (next < events.size()) {
+        if (isEventExist()) {
             getCurrentEvent().put(key, value);
         } else {
             Map tmp;
@@ -115,7 +116,7 @@ public class Event {
 
     /**
      * Add a new event into array with selected event type and input date.
-     * 
+     *
      * @param date The event date
      * @param useTemp True for using template to create new data
      * @return The generated event data map
@@ -157,12 +158,16 @@ public class Event {
     }
 
     /**
-     * Get the current pointed event
+     * Get the current pointed event, if not available will return empty map
      *
      * @return
      */
     public Map getCurrentEvent() {
-        return events.get(next);
+        if (isEventExist()) {
+            return events.get(next);
+        } else {
+            return new HashMap();
+        }
     }
 
     /**
@@ -190,6 +195,5 @@ public class Event {
         }
 
         next = events.size();
-        return;
     }
 }

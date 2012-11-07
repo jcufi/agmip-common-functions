@@ -1,9 +1,7 @@
 package org.agmip.functions;
 
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -176,7 +174,7 @@ public class ExperimentHelper {
                 }
             }
 
-        // Check input dates
+            // Check input dates
             if (!isValidDate(eDate, eDateCal, "-")) {
                 LOG.error("INVALID EARLIST DATE:[" + eDate + "]");
                 return;
@@ -190,7 +188,7 @@ public class ExperimentHelper {
             }
             duration = (int) ((lDateCal.getTimeInMillis() - eDateCal.getTimeInMillis()) / 86400000);
 
-        // Check Number of days of accumulation
+            // Check Number of days of accumulation
             try {
                 intDays = Integer.parseInt(days);
             } catch (Exception e) {
@@ -202,7 +200,7 @@ public class ExperimentHelper {
                 return;
             }
 
-        // Check Threshold rainfall amount
+            // Check Threshold rainfall amount
             try {
                 accRainAmtTotal = Double.parseDouble(rain);
             } catch (Exception e) {
@@ -214,7 +212,7 @@ public class ExperimentHelper {
                 return;
             }
 
-        // Find the first record which is the ealiest date for the window in each year
+            // Find the first record which is the ealiest date for the window in each year
             int end;
             int start = getDailyRecIndex(dailyData, eDate, startYearIndex, 0);
             for (int i = 0; i < windows.length; i++) {
@@ -230,7 +228,7 @@ public class ExperimentHelper {
                 return;
             }
 
-        // Loop each window to try to find appropriate planting date
+            // Loop each window to try to find appropriate planting date
             for (int i = 0; i < windows.length; i++) {
 
             // Check first n days
@@ -576,7 +574,7 @@ public class ExperimentHelper {
             LOG.error("INVALID VALUES FOR DMR and OMC2N");
             return;
         }
-        
+
         BigDecimal omnpct = start.divide(decDmr, 2, RoundingMode.HALF_UP).divide(decOMC2N, 2, RoundingMode.HALF_UP);
         // Update organic material event
         events.setEventType("organic_matter");
