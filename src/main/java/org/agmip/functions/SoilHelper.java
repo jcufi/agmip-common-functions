@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import static org.agmip.util.MapUtil.*;
-import static org.agmip.util.assume.Command.*;
 import static org.agmip.ace.util.AcePathfinderUtil.insertValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
