@@ -36,10 +36,10 @@ public class ExperimentHelper {
      * @param days Number of days of accumulation
      * @param wthData The HashMap of experiment (including weather data)
      *
-     * @return The calculated first planting date, if not valid based on the
-     * input data, will return ""
+     * @return An {@code ArrayList} of {@code pdate} for each year in the
+     * weather data.
      */
-    public static void getAutoPlantingDate(String eDate, String lDate, String rain, String days, Map data) {
+    public static HashMap<String, ArrayList<String>> getAutoPlantingDate(String eDate, String lDate, String rain, String days, Map data) {
 
         Map wthData;
         ArrayList<Map> dailyData;
@@ -54,24 +54,28 @@ public class ExperimentHelper {
         int expDur;
         int startYear = 0;
         Window[] windows;
+        ArrayList<String> pdates = new ArrayList<String>();
+        HashMap<String, ArrayList<String>> results = new HashMap<String, ArrayList<String>>();
+
+
 
         // Validation for input parameters
         // Weather data check and try to get daily data
         if (data.isEmpty()) {
             LOG.error("NO ANY DATA.");
-            return;
+            return new HashMap<String, ArrayList<String>>();
         } else {
             // Case for multiple data json structure
             if (data.containsKey("weathers")) {
                 ArrayList<Map> wths = getObjectOr(data, "weathers", new ArrayList());
                 if (wths.isEmpty()) {
                     LOG.error("NO WEATHER DATA.");
-                    return;
+                    return new HashMap<String, ArrayList<String>>();
                 } else {
                     wthData = wths.get(0);
                     if (wthData.isEmpty()) {
                         LOG.error("NO WEATHER DATA.");
-                        return;
+                        return new HashMap<String, ArrayList<String>>();
                     } else {
                         dailyData = getObjectOr(wthData, "dailyWeather", new ArrayList());
                     }
@@ -80,14 +84,14 @@ public class ExperimentHelper {
                 HashMap<String, Object> weather = (HashMap<String, Object>) getObjectOr(data, "weather", new HashMap<String, Object>());
                 if (weather.isEmpty()) {
                     LOG.error("NO WEATHER DATA.");
-                    return;
+                    return new HashMap<String, ArrayList<String>>();
                 }
                 dailyData = (ArrayList<Map>) getObjectOr(weather, "dailyWeather", new ArrayList());
             }
 
             if (dailyData.isEmpty()) {
                 LOG.error("EMPTY DAILY WEATHER DATA.");
-                return;
+                return new HashMap<String, ArrayList<String>>();
             }
         }
 
@@ -112,6 +116,8 @@ public class ExperimentHelper {
             expDur = 1;
         }
 
+        LOG.debug("EXP_DUR FOUND: {}", expDur);
+
                 // The starting year for multiple year runs may be set with SC_YEAR.
         if (expDur > 1) {
             try {
@@ -120,6 +126,8 @@ public class ExperimentHelper {
                 startYear = 0;
             }
         }
+
+        LOG.debug("START YEAR: {}", startYear);
         windows = new Window[expDur];
 
         
@@ -169,7 +177,7 @@ public class ExperimentHelper {
                 } // If multiple year duration, then report error and end function
                 else {
                     LOG.error("THE START YEAR IS OUT OF DATA RANGE (SC_YEAR:[" + startYear + "]");
-                        return;
+                        return new HashMap<String, ArrayList<String>>();
                     }
                 }
             }
@@ -177,11 +185,11 @@ public class ExperimentHelper {
             // Check input dates
             if (!isValidDate(eDate, eDateCal, "-")) {
                 LOG.error("INVALID EARLIST DATE:[" + eDate + "]");
-                return;
+                return new HashMap<String, ArrayList<String>>();
             }
             if (!isValidDate(lDate, lDateCal, "-")) {
                 LOG.error("INVALID LATEST DATE:[" + lDate + "]");
-                return;
+                return new HashMap<String, ArrayList<String>>();
             }
             if (eDateCal.after(lDateCal)) {
                 lDateCal.set(Calendar.YEAR, lDateCal.get(Calendar.YEAR) + 1);
@@ -193,11 +201,11 @@ public class ExperimentHelper {
                 intDays = Integer.parseInt(days);
             } catch (Exception e) {
                 LOG.error("INVALID NUMBER FOR NUMBER OF DAYS OF ACCUMULATION");
-                return;
+                return new HashMap<String, ArrayList<String>>();
             }
             if (intDays <= 0) {
                 LOG.error("NON-POSITIVE NUMBER FOR NUMBER OF DAYS OF ACCUMULATION");
-                return;
+                return new HashMap<String, ArrayList<String>>();
             }
 
             // Check Threshold rainfall amount
@@ -205,11 +213,11 @@ public class ExperimentHelper {
                 accRainAmtTotal = Double.parseDouble(rain);
             } catch (Exception e) {
                 LOG.error("INVALID NUMBER FOR THRESHOLD RAINFALL AMOUNT");
-                return;
+                return new HashMap<String, ArrayList<String>>();
             }
             if (accRainAmtTotal <= 0) {
                 LOG.error("NON-POSITIVE NUMBER FOR THRESHOLD RAINFALL AMOUNT");
-                return;
+                return new HashMap<String, ArrayList<String>>();
             }
 
             // Find the first record which is the ealiest date for the window in each year
@@ -225,7 +233,7 @@ public class ExperimentHelper {
 
             if (windows[0].start == dailyData.size()) {
                 LOG.error("NO VALID DAILY DATA FOR SEARCH WINDOW");
-                return;
+                return new HashMap<String, ArrayList<String>>();
             }
 
             // Loop each window to try to find appropriate planting date
@@ -244,7 +252,8 @@ public class ExperimentHelper {
                     if (accRainAmt >= accRainAmtTotal) {
                         LOG.debug("1: "+getValueOr(dailyData.get(j), "w_date", "") + " : " + accRainAmt + ", " + (accRainAmt >= accRainAmtTotal));
                     //event.updateEvent("date", getValueOr(dailyData.get(j), "w_date", ""));
-                        AcePathfinderUtil.insertValue((HashMap)data, "pdate", getValueOr(dailyData.get(j), "w_date", ""));                    
+                        //AcePathfinderUtil.insertValue((HashMap)data, "pdate", getValueOr(dailyData.get(j), "w_date", ""));
+                        pdates.add(getValueOr(dailyData.get(j), "w_date", ""));
                         break;
                     }
                 }
@@ -261,6 +270,7 @@ public class ExperimentHelper {
                 }
 
             // Check following days
+                int outIndex = last;
                 for (int j = last; j < windows[i].end; j++) {
 
                     try {
@@ -272,11 +282,21 @@ public class ExperimentHelper {
                     if (accRainAmt >= accRainAmtTotal) {
                         LOG.debug("2:"+getValueOr(dailyData.get(j), "w_date", "") + " : " + accRainAmt + ", " + (accRainAmt >= accRainAmtTotal));
                     //event.updateEvent("date", getValueOr(dailyData.get(j), "w_date", ""));
-                        AcePathfinderUtil.insertValue((HashMap)data, "pdate", getValueOr(dailyData.get(j), "w_date", ""));
+                        //AcePathfinderUtil.insertValue((HashMap)data, "pdate", getValueOr(dailyData.get(j), "w_date", ""));
+                        pdates.add(getValueOr(dailyData.get(j), "w_date", ""));
                         break;
                     }
+                    outIndex++;
+                }
+
+                if (accRainAmt < accRainAmtTotal) {
+                    String lastDay = getValueOr(dailyData.get(windows[i].end-1), "w_date", "");
+                    LOG.error("Could not find an appropriate day to plant, using {}", lastDay);
+                    pdates.add(lastDay);
                 }
             }
+            results.put("pdate", pdates);
+            return results;
         }
 
     /**
