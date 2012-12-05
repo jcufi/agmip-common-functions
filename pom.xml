@@ -3,7 +3,7 @@
 
   <groupId>org.agmip</groupId>
   <artifactId>agmip-common-functions</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.2-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>AgMIP Common Functions</name>
