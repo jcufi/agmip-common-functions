@@ -86,9 +86,7 @@ public class LayerReducer {
 				aggregatedSoilsData.add(currentSoil);
 			}
 		}
-		log.info("Information about soil aggregation");
-		log.info("Soil layers before : " + soilsData.size());
-		log.info("Soil layers after  : " + aggregatedSoilsData.size());
+		log.debug("Information about soil aggregation, soil layers before : "+soilsData.size()+" after : "+aggregatedSoilsData.size());
 		return aggregatedSoilsData;
 	}
 

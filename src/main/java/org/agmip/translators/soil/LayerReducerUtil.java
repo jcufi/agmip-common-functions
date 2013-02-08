@@ -66,8 +66,8 @@ public class LayerReducerUtil {
 
 	public static void mergeSoilAndInitializationData(ArrayList<HashMap<String, String>> soilsData, ArrayList<HashMap<String, String>> initData) {
 		int index = 0;
-		log.info("Init data size : " + initData.size());
-		log.info("Soil data size : " + soilsData.size());
+		log.debug("Init data size : " + initData.size());
+		log.debug("Soil data size : " + soilsData.size());
 		for (HashMap<String, String> soilData : soilsData) {
 			if (initData.get(index).get(SAReducerDecorator.ICBL).equals(soilData.get(LayerReducer.SLLB))) {
 				soilData.putAll(initData.get(index));
