@@ -2,6 +2,7 @@ package org.agmip.translators.soil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,7 @@ public class LayerReducer {
 	 * @param soilsData
 	 * @return
 	 */
-	public ArrayList<HashMap<String, String>> process(ArrayList<HashMap<String, String>> soilsData) {
+	public ArrayList<HashMap<String, String>> process(List<HashMap<String, String>> soilsData) {
 		HashMap<String, String> previousSoil;
 		ArrayList<HashMap<String, String>> aggregatedSoilsData;
 		HashMap<String, String> aggregatedSoil;
@@ -110,7 +111,7 @@ public class LayerReducer {
 	 * @param soilsData
 	 * @return
 	 */
-	public ArrayList<HashMap<String, String>> normalizeSoilLayers(ArrayList<HashMap<String, String>> soilsData) {
+	public ArrayList<HashMap<String, String>> normalizeSoilLayers(List<HashMap<String, String>> soilsData) {
 		HashMap<String, String> referenceSoil;
 		ArrayList<HashMap<String, String>> newSoilsData;
 		referenceSoil = soilsData.get(0);
@@ -123,7 +124,7 @@ public class LayerReducer {
 					if (currentSoil.containsKey(key)) {
 						fullCurrentSoil.put(key, currentSoil.get(key));
 					}
-				}
+				} 
 				newSoilsData.add(fullCurrentSoil);
 			}
 		}

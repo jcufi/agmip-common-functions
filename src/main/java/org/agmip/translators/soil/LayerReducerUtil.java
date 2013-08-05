@@ -4,21 +4,28 @@ import static java.lang.Float.parseFloat;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Some util functions for handling soil data
+ * 
+ * @author jucufi
+ * 
+ */
 public class LayerReducerUtil {
 	public static final Logger log = LoggerFactory.getLogger(LayerReducerUtil.class);
-	private static String UNKNOWN_DEFAULT_VALUE = "0.0";
+	private static final String UNKNOWN_DEFAULT_VALUE = "0.0";
 
 	/**
-	 * Compute soil layer thickness
+	 * Compute soil layer thickness.
 	 * 
-	 * @param soilsData
-	 * @return
+	 * @param soilsData soil informations (with soil layer deep instead of soil layer thickness)
+	 * @return the same map as input but with soil layer thickness
 	 */
-	public static ArrayList<HashMap<String, String>> computeSoilLayerSize(ArrayList<HashMap<String, String>> soilsData) {
+	public static ArrayList<HashMap<String, String>> computeSoilLayerSize(List<HashMap<String, String>> soilsData) {
 		float deep = 0.0f;
 		ArrayList<HashMap<String, String>> newSoilsData;
 		newSoilsData = new ArrayList<HashMap<String, String>>();
@@ -60,14 +67,25 @@ public class LayerReducerUtil {
 		} else {
 			value = UNKNOWN_DEFAULT_VALUE;
 		}
-
 		return value;
 	}
 
-	public static void mergeSoilAndInitializationData(ArrayList<HashMap<String, String>> soilsData, ArrayList<HashMap<String, String>> initData) {
+	/**
+	 * Merge soil and initialization information in the same map, it's important to processing both at the same time
+	 * during soils layers reducing in order to avoid having inconsistent data. At the end of the call the first map
+	 * contains initialization data.
+	 * 
+	 * @param soilsData soil data map
+	 * @param initData initialization data map
+	 */
+	public static void mergeSoilAndInitializationData(List<HashMap<String, String>> soilsData, List<HashMap<String, String>> initData) {
 		int index = 0;
 		log.debug("Init data size : " + initData.size());
 		log.debug("Soil data size : " + soilsData.size());
+		if (initData.size() == 0) {
+			log.error("Unable to merge soil information, initial condition information unavailable");
+			return;
+		}
 		for (HashMap<String, String> soilData : soilsData) {
 			if (initData.get(index).get(SAReducerDecorator.ICBL).equals(soilData.get(LayerReducer.SLLB))) {
 				soilData.putAll(initData.get(index));
